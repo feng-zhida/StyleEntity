@@ -1,0 +1,99 @@
+# general settings
+name: celeb_clip_b_zero_D6W768
+model_type: StyleEntityModel
+num_gpu: 8  # set num_gpu: 0 for cpu mode
+manual_seed: 8888
+text_features: datasets/train_openai_clip_b.pt
+mul_factor: 8
+avg_latent: ~
+r1_reg_weight: 10
+net_d_reg_every: 800000000
+per_feature_sample: 9
+max_unique_vectors: 4
+inference_names_path: 'datasets/named_entity_for_inference.txt'
+cl: True
+
+l2_weight: 500
+diff_pre_layer: False
+
+alpha: 0.15
+eval_names: ["white hair", "with beard", "big eyes", "afro hairstyle", "big mouth"]
+
+
+# dataset and data loader settings
+datasets:
+  train:
+    name: 1
+    type: IndexDataset
+    text_features: datasets/train_openai_clip_b.pt
+    # data loader
+    use_shuffle: true
+    num_worker_per_gpu: 2
+    batch_size_per_gpu: 8
+    prefetch_mode: ~
+
+# network structures
+network_g:
+  type: StyleGAN2Generator
+  out_size: 1024
+  num_style_feat: 512
+  num_mlp: 8
+  channel_multiplier: 2
+  resample_kernel: [1, 3, 3, 1]
+  lr_mlp: 0.01
+
+clip:
+  type: CLIPArch
+  size: 224
+
+mapper:
+  type: LevelsMapper 
+  in_dim: 512
+  dim: 512
+  out_dim: 512
+  depth: 4
+  style_dim: 512
+  num_latent: 18
+
+# path
+path:
+  pretrain_network_g: pretrained_models/stylegan2_ffhq_config_f_1024_official-3ab41b38.pth
+  strict_load_g: True
+  resume_state: ~
+pretrained:
+    encoder: ~ #experiments/famous_face/models/encoder_200000.pth
+
+# training settings
+train:
+  optim_mapper:
+    type: Adam
+    lr: !!float 0.2
+  scheduler:
+    type: MultiStepLR
+    milestones: [50000, 100000, 150000]
+    gamma: 0.5
+
+  total_iter: 200000
+  warmup_iter: -1  # no warm up
+  gan_opt:
+    type: GANLoss
+    gan_type: wgan_softplus
+    loss_weight: !!float 1
+# validation settings
+val:
+  val_freq: !!float 1000
+  save_img: true
+
+# logging settings
+logger:
+  print_freq: 1
+  save_checkpoint_freq: !!float 5000
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29500
